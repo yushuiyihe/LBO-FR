@@ -4,7 +4,7 @@ clc;
 
 %% Parameter Settings
 K = 2;                  
-gamma = 1e-6;           
+lambda = 1e-6;           
 rho = 1e-7;             
 max_iter = 500;         
 tolerance = 0.2;        
@@ -102,7 +102,7 @@ for k = 1:K
         
         % Construct linear system and solve
         top_left = sparse(A);
-        top_right = sparse(-gamma * R1);
+        top_right = sparse(-lambda * R1);
         bottom_left = sparse(R1);
         bottom_right = sparse(R0);
         left_matrix = [top_left, top_right; bottom_left, bottom_right];
@@ -237,7 +237,7 @@ for iter = 1:max_iter
             end
             f = sum(cat(2, f_temp{:}), 2) + (rho/2) * (alpha - u);
             
-            left_matrix = [sparse(A), sparse(-gamma * R1); sparse(R1), sparse(R0)];
+            left_matrix = [sparse(A), sparse(-lambda * R1); sparse(R1), sparse(R0)];
             right_vector = [f; zeros(M, 1)];
             solution = left_matrix \ right_vector;
             b_final{k} = solution(1:M);

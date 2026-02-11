@@ -56,7 +56,7 @@ mse_optim_history = zeros(max_iter, 1);
 fprintf('===== Starting Initialization Algorithm =====\n');
 
 % Initialize variables
-lambda = ones(K, 1);
+xi = ones(K, 1);
 b = cell(K, 1);
 mu = mean(y_original);
 
@@ -74,7 +74,7 @@ for k = 1:K
     for i = 1:n
         P_i = P_cell{i};
         for j = 1:(k-1) 
-            y_i(i) = y_i(i) - lambda(j) * (b{j}' * P_i * b{j});
+            y_i(i) = y_i(i) - xi(j) * (b{j}' * P_i * b{j});
         end
     end
     
@@ -90,13 +90,13 @@ for k = 1:K
         % 1. Update b
         A_temp = cell(1, n);
         for i = 1:n
-            A_temp{i} = (lambda(k)^2/(2*n)) * (P_cell{i}*alpha*alpha'*P_cell{i});
+            A_temp{i} = (xi(k)^2/(2*n)) * (P_cell{i}*alpha*alpha'*P_cell{i});
         end
         A = sum(cat(3, A_temp{:}), 3) + (rho/2) * eye(M);
         
         f_temp = cell(1, n);
         for i = 1:n
-            f_temp{i} = (lambda(k)/(2*n)) * (y_i(i)-mu) * (P_cell{i}*alpha);
+            f_temp{i} = (xi(k)/(2*n)) * (y_i(i)-mu) * (P_cell{i}*alpha);
         end
         f = sum(cat(2, f_temp{:}), 2) + (rho/2) * (alpha - u);
         
@@ -113,13 +113,13 @@ for k = 1:K
         % 2. Update alpha
         left_matrix_temp = cell(1, n);
         for i = 1:n
-            left_matrix_temp{i} = (lambda(k)^2/n) * (P_cell{i} * b{k} * b{k}' * P_cell{i});
+            left_matrix_temp{i} = (xi(k)^2/n) * (P_cell{i} * b{k} * b{k}' * P_cell{i});
         end
         left_matrix_alpha = sum(cat(3, left_matrix_temp{:}), 3) + rho * eye(M);
         
         right_vector_temp = cell(1, n);
         for i = 1:n
-            right_vector_temp{i} = (lambda(k)/n) * (y_i(i)-mu) * (P_cell{i}*b{k});
+            right_vector_temp{i} = (xi(k)/n) * (y_i(i)-mu) * (P_cell{i}*b{k});
         end
         right_vector_alpha = sum(cat(2, right_vector_temp{:}), 2) + rho * (b{k} + u);
         alpha = left_matrix_alpha \ right_vector_alpha;
@@ -142,19 +142,19 @@ for k = 1:K
         alpha_prev = alpha;
     end
     
-    % Update lambda
+    % Update xi
     sum_term = 0;
     for i = 1:n
         P_i = P_cell{i};
         sum_term = sum_term + (y_i(i) - mu) * (b{k}' * P_i * b{k});
     end
-    lambda(k) = sign(sum_term);
+    xi(k) = sign(sum_term);
     
     % Update mu
     term = 0;
     for i = 1:n
         P_i = P_cell{i};
-        term = term + lambda(k) * (b{k}' * P_i * b{k});
+        term = term + xi(k) * (b{k}' * P_i * b{k});
     end
     mu = (sum(y_i) - term) / n;
     
@@ -167,7 +167,7 @@ for i = 1:n
     P_i = P_cell{i};
     y_pred_i = mu;
     for kk = 1:K
-        y_pred_i = y_pred_i + lambda(kk) * (b{kk}' * P_i * b{kk});
+        y_pred_i = y_pred_i + xi(kk) * (b{kk}' * P_i * b{kk});
     end
     y_pred(i) = y_pred_i;
 end
@@ -179,7 +179,7 @@ fprintf('Initialization completed\n\n');
 fprintf('===== Starting Multi-component Iterative Optimization =====\n');
 
 % Initialize optimization variables
-lambda_optim = lambda;
+xi_optim = xi;
 b_final = b;
 mu_optim = mu;
 converged = false;
@@ -206,7 +206,7 @@ for iter = 1:max_iter
             P_i = P_cell{i};
             for j = 1:K
                 if j ~= k
-                    y_k(i) = y_k(i) - lambda_optim(j) * (b_final{j}' * P_i * b_final{j});
+                    y_k(i) = y_k(i) - xi_optim(j) * (b_final{j}' * P_i * b_final{j});
                 end
             end
         end
@@ -227,13 +227,13 @@ for iter = 1:max_iter
             % 1. Update b
             A_temp = cell(1, n);
             for i = 1:n
-                A_temp{i} = (lambda_optim(k)^2/(2*n)) * (P_cell{i}*alpha) * (P_cell{i}*alpha)';
+                A_temp{i} = (xi_optim(k)^2/(2*n)) * (P_cell{i}*alpha) * (P_cell{i}*alpha)';
             end
             A = sum(cat(3, A_temp{:}), 3) + (rho/2) * eye(M);
             
             f_temp = cell(1, n);
             for i = 1:n
-                f_temp{i} = (lambda_optim(k)/(2*n)) * (y_k(i)-mu_optim) * (P_cell{i}*alpha);
+                f_temp{i} = (xi_optim(k)/(2*n)) * (y_k(i)-mu_optim) * (P_cell{i}*alpha);
             end
             f = sum(cat(2, f_temp{:}), 2) + (rho/2) * (alpha - u);
             
@@ -246,13 +246,13 @@ for iter = 1:max_iter
             b_bT = b_final{k} * b_final{k}';
             left_matrix_temp = cell(1, n);
             for i = 1:n
-                left_matrix_temp{i} = (lambda_optim(k)^2/n) * (P_cell{i} * b_bT * P_cell{i});
+                left_matrix_temp{i} = (xi_optim(k)^2/n) * (P_cell{i} * b_bT * P_cell{i});
             end
             left_matrix_alpha = sum(cat(3, left_matrix_temp{:}), 3) + rho * eye(M);
             
             right_vector_temp = cell(1, n);
             for i = 1:n
-                right_vector_temp{i} = (lambda_optim(k)/n) * (y_k(i)-mu_optim) * (P_cell{i}*b_final{k});
+                right_vector_temp{i} = (xi_optim(k)/n) * (y_k(i)-mu_optim) * (P_cell{i}*b_final{k});
             end
             right_vector_alpha = sum(cat(2, right_vector_temp{:}), 2) + rho * (b_final{k} + u);
             alpha = left_matrix_alpha \ right_vector_alpha;
@@ -271,19 +271,19 @@ for iter = 1:max_iter
             alpha_prev_admm = alpha;
         end
         
-        % Update lambda_k
+        % Update xi_k
         sum_term = 0;
         for i = 1:n
             P_i = P_cell{i};
             sum_term = sum_term + (y_k(i) - mu_optim) * (b_final{k}' * P_i * b_final{k});
         end
-        lambda_optim(k) = sign(sum_term);
+        xi_optim(k) = sign(sum_term);
         
         % Update mu_optim
         term = 0;
         for i = 1:n
             P_i = P_cell{i};
-            term = term + lambda_optim(k) * (b_final{k}' * P_i * b_final{k});
+            term = term + xi_optim(k) * (b_final{k}' * P_i * b_final{k});
         end
         mu_optim = (sum(y_k) - term) / n;
     end
@@ -297,7 +297,7 @@ for iter = 1:max_iter
         P_i = P_cell{i};
         y_pred_i = mu_optim;
         for kk = 1:K
-            y_pred_i = y_pred_i + lambda_optim(kk) * (b_final{kk}' * P_i * b_final{kk});
+            y_pred_i = y_pred_i + xi_optim(kk) * (b_final{kk}' * P_i * b_final{kk});
         end
         y_pred(i) = y_pred_i;
     end

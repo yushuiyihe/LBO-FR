@@ -345,6 +345,12 @@ function plot_brain_b_compare(nodes, triangles, b_true, b_est, title_str, save_n
     view(135, 30); 
     lighting gouraud; material([0.5, 0.5, 0.2, 5, 0.5]);
     camlight('headlight');
+    xticks(-1:0.5:1);
+    yticks(-1:0.5:1);
+    zticks(-1:0.5:1);
+    xlim([-1, 1]); 
+    ylim([-1, 1]); 
+    zlim([-1, 1]);         
 
     subplot(1, 2, 2);
     h_est = trisurf(triangles, nodes(:,1), nodes(:,2), nodes(:,3), b_est, ...
@@ -362,6 +368,12 @@ function plot_brain_b_compare(nodes, triangles, b_true, b_est, title_str, save_n
     view(135, 30);
     lighting gouraud; material([0.5, 0.5, 0.2, 5, 0.5]);
     camlight('headlight');
+    xticks(-1:0.5:1);
+    yticks(-1:0.5:1);
+    zticks(-1:0.5:1); 
+    xlim([-1, 1]); 
+    ylim([-1, 1]); 
+    zlim([-1, 1]);         
     
     % Add shared colorbar
     cbar = colorbar('Position', [0.92, 0.15, 0.02, 0.7]);
@@ -372,7 +384,7 @@ function plot_brain_b_compare(nodes, triangles, b_true, b_est, title_str, save_n
     saveas(gcf, png_name, 'png'); 
 end
 
-% Draw contour lines on spherical triangular mesh surface
+% New: Draw contour lines on spherical triangular mesh surface
 function contour_on_sphere(nodes, triangles, data)
     % Generate contour levels
     num_levels = 8;
@@ -432,6 +444,12 @@ function plot_brain_b(nodes, triangles, b_data, title_str, save_name)
     view(135, 30); 
     lighting gouraud; material([0.5, 0.5, 0.2, 5, 0.5]);
     cbar = colorbar;  cbar.Label.FontSize = 12;
+    xticks(-1:0.5:1);
+    yticks(-1:0.5:1);
+    zticks(-1:0.5:1);
+    xlim([-1, 1]); 
+    ylim([-1, 1]); 
+    zlim([-1, 1]);  
     
     % Draw coordinate system arrows
     quiver3(0,0,1.5, 0.5,0,0, 'r', 'LineWidth', 2, 'MaxHeadSize', 0.5);

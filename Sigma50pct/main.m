@@ -317,7 +317,7 @@ end
 
 fprintf('Optimization completed\n\n');
 
-% Define a function to encapsulate brain b comparison plotting
+% Function to plot and compare true and estimated beta values on brain surface
 function plot_brain_b_compare(nodes, triangles, b_true, b_est, title_str, save_name)
     b_true = reshape(b_true, [], 1);
     b_est = reshape(b_est, [], 1);
@@ -335,7 +335,8 @@ function plot_brain_b_compare(nodes, triangles, b_true, b_est, title_str, save_n
     hold on;
     caxis([cmin, cmax]);  
     
-    plot_contours(nodes, b_true);
+    % Draw contour lines directly on spherical triangular mesh
+    contour_on_sphere(nodes, triangles, b_true);
     axis equal; 
     xlabel('X', 'FontSize', 12);
     ylabel('Y', 'FontSize', 12);
@@ -350,7 +351,8 @@ function plot_brain_b_compare(nodes, triangles, b_true, b_est, title_str, save_n
         'EdgeColor', 'k', 'FaceAlpha', 0.9, 'LineWidth', 0.5);
     hold on;
     caxis([cmin, cmax]);  
-    plot_contours(nodes, b_est);
+    % Draw contour lines directly on spherical triangular mesh
+    contour_on_sphere(nodes, triangles, b_est);
 
     axis equal;
     xlabel('X', 'FontSize', 12);
@@ -366,38 +368,52 @@ function plot_brain_b_compare(nodes, triangles, b_true, b_est, title_str, save_n
     cbar.Label.FontSize = 12;
 
     savefig(gcf, save_name); 
-    pdf_name = strrep(save_name, '.fig', '.png'); 
-    saveas(gcf, pdf_name, 'png'); 
+    png_name = strrep(save_name, '.fig', '.png'); 
+    saveas(gcf, png_name, 'png'); 
 end
 
-% Plot 3D contours
-function plot_contours(nodes, b_data)
-    theta = atan2(nodes(:,2), nodes(:,1));  % Azimuth angle (range [-pi, pi])
-    phi = acos(nodes(:,3));                 % Polar angle (range [0, pi])
-    
-    theta_norm = (theta + pi) / (2*pi);     % Normalized azimuth angle
-    phi_norm = phi / pi;                    % Normalized polar angle
-    
-    [theta_grid, phi_grid] = meshgrid(linspace(0, 1, 100), linspace(0, 1, 100));
-    b_grid = griddata(theta_norm, phi_norm, b_data, theta_grid, phi_grid, 'cubic');
-    
+% Draw contour lines on spherical triangular mesh surface
+function contour_on_sphere(nodes, triangles, data)
+    % Generate contour levels
     num_levels = 8;
-    levels = linspace(min(b_data), max(b_data), num_levels);
+    levels = linspace(min(data), max(data), num_levels);
     
-    for i = 1:length(levels)
-        contour2d = contour(theta_grid, phi_grid, b_grid, [levels(i), levels(i)]);
-        if size(contour2d, 2) > 0
-            theta_contour = contour2d(1,:) * 2*pi - pi;
-            phi_contour = contour2d(2,:) * pi;
-            x_contour = sin(phi_contour) .* cos(theta_contour);
-            y_contour = sin(phi_contour) .* sin(theta_contour);
-            z_contour = cos(phi_contour);
-            plot3(x_contour, y_contour, z_contour, 'k', 'LineWidth', 1.5);
+    % Iterate each triangle to compute and draw contour segments
+    for t = 1:size(triangles, 1)
+        tri = triangles(t, :);
+        pts = nodes(tri, :);    % Coordinates of three triangle vertices
+        vals = data(tri, :);    % Data values at three vertices
+        
+        % Compute intersection points for each contour level
+        for l = 1:length(levels)
+            level = levels(l);
+            edges = [1 2; 2 3; 3 1];
+            intersect_pts = [];
+            
+            for e = 1:3
+                p1 = pts(edges(e,1), :);
+                p2 = pts(edges(e,2), :);
+                v1 = vals(edges(e,1));
+                v2 = vals(edges(e,2));
+                
+                % Check if the edge crosses the current contour level
+                if (v1 - level) * (v2 - level) <= 0 && abs(v1 - v2) > 1e-6
+                    frac = (level - v1) / (v2 - v1);
+                    pt = p1 + frac * (p2 - p1);
+                    intersect_pts = [intersect_pts; pt];
+                end
+            end
+            
+            % Draw contour segment if two intersection points exist
+            if size(intersect_pts, 1) == 2
+                plot3(intersect_pts(:,1), intersect_pts(:,2), intersect_pts(:,3), ...
+                      'k', 'LineWidth', 1.5);
+            end
         end
     end
 end
 
-% Original brain b plotting function
+% Original brain surface beta distribution plotting function
 function plot_brain_b(nodes, triangles, b_data, title_str, save_name)
     figure('Position', [100, 100, 1200, 800], 'Renderer', 'painters');
     
@@ -405,28 +421,7 @@ function plot_brain_b(nodes, triangles, b_data, title_str, save_name)
         'EdgeColor', 'k', 'FaceAlpha', 0.9, 'LineWidth', 0.5);
     hold on;
     caxis([min(b_data), max(b_data)]);
-    
-    % Calculate spherical coordinates and plot contours
-    theta = atan2(nodes(:,2), nodes(:,1));
-    phi = acos(nodes(:,3));
-    theta_norm = (theta + pi) / (2*pi);
-    phi_norm = phi / pi;
-    [theta_grid, phi_grid] = meshgrid(linspace(0, 1, 100), linspace(0, 1, 100));
-    b_grid = griddata(theta_norm, phi_norm, b_data, theta_grid, phi_grid, 'cubic');
-    
-    num_levels = 8;
-    levels = linspace(min(b_data), max(b_data), num_levels);
-    for i = 1:length(levels)
-        contour2d = contour(theta_grid, phi_grid, b_grid, [levels(i), levels(i)]);
-        if size(contour2d, 2) > 0
-            theta_contour = contour2d(1,:) * 2*pi - pi;
-            phi_contour = contour2d(2,:) * pi;
-            x_contour = sin(phi_contour) .* cos(theta_contour);
-            y_contour = sin(phi_contour) .* sin(theta_contour);
-            z_contour = cos(phi_contour);
-            plot3(x_contour, y_contour, z_contour, 'k', 'LineWidth', 1.5);
-        end
-    end
+    contour_on_sphere(nodes, triangles, b_data);
     
     legend('β Value Distribution', 'Location', 'northeastoutside');
     axis equal; 
@@ -438,6 +433,7 @@ function plot_brain_b(nodes, triangles, b_data, title_str, save_name)
     lighting gouraud; material([0.5, 0.5, 0.2, 5, 0.5]);
     cbar = colorbar;  cbar.Label.FontSize = 12;
     
+    % Draw coordinate system arrows
     quiver3(0,0,1.5, 0.5,0,0, 'r', 'LineWidth', 2, 'MaxHeadSize', 0.5);
     quiver3(0,0,1.5, 0,0.5,0, 'g', 'LineWidth', 2, 'MaxHeadSize', 0.5);
     quiver3(0,0,1.5, 0,0,0.5, 'b', 'LineWidth', 2, 'MaxHeadSize', 0.5);
@@ -445,12 +441,14 @@ function plot_brain_b(nodes, triangles, b_data, title_str, save_name)
     text(0,1.7,1.5, 'Y', 'FontSize', 12, 'FontWeight', 'bold', 'Color', 'g');
     text(0,0,2.2, 'Z', 'FontSize', 12, 'FontWeight', 'bold', 'Color', 'b');
     
+    % Add title annotation
     annotation('textbox', [0.3, 0.9, 0.4, 0.1], ...
                'String', title_str, 'FontSize', 16, 'FontWeight', 'bold', ...
                'HorizontalAlignment', 'center', 'LineStyle', 'none');
     
     add_slices;  
     
+    % Configure legend for slice planes
     legend([h1, ...
             line([], [], 'Color', 'cyan', 'LineWidth', 10), ...
             line([], [], 'Color', 'magenta', 'LineWidth', 10), ...
@@ -460,8 +458,8 @@ function plot_brain_b(nodes, triangles, b_data, title_str, save_name)
     
     camlight('headlight'); drawnow;
     savefig(gcf, save_name);
-    pdf_name = strrep(save_name, '.fig', '.png');
-    saveas(gcf, pdf_name, 'png');
+    png_name = strrep(save_name, '.fig', '.png');
+    saveas(gcf, png_name, 'png');
 end
 
 plot_brain_b_compare(nodes, triangles, b_true(1,:), b_final{1}', ...
